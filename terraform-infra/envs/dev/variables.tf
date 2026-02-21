@@ -1,17 +1,30 @@
-variable "env" { default = "dev" }
-variable "project_id" { default = "motocorp-simon" }
-variable "region" { default = "us-central1" }
+variable "project_id" {
+  default = "motocorp-simon"
+}
 
-variable "vpc_name" { default = "microservices-vpc-dev" }
+variable "region" {
+  default = "us-central1"
+}
 
+variable "vpc_name" {
+  default = "microservices-vpc-dev"
+}
+
+variable "env" {
+  default = "dev"
+}
+
+# Public subnet CIDRs
 variable "public_subnet_cidrs" {
-  default = ["10.0.1.0/24", "10.0.2.0/24"]
+  default = ["10.1.1.0/24", "10.1.2.0/24"]
 }
 
+# Private subnet CIDRs
 variable "private_subnet_cidrs" {
-  default = ["10.0.101.0/24", "10.0.102.0/24"]
+  default = ["10.1.101.0/24", "10.1.102.0/24"]
 }
 
+# Microservices list
 variable "microservice_names" {
   default = ["appointment-service", "order-service", "patient-service"]
 }
