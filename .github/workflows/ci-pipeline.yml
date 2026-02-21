@@ -10,11 +10,11 @@ jobs:
   build-and-docker:
     runs-on: ubuntu-latest
     env:
-      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}  # GitHub secret
-      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}          # base64-encoded service account key
+      GCP_PROJECT_ID: ${{ secrets.motocorp-simon}}  # GCP project ID
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}          # Base64-encoded service account key
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       ##############################
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Node.js dependencies
+      - name: Install appointment-service dependencies
         run: |
           cd appointment-service
           npm install
@@ -33,7 +33,7 @@ jobs:
       - name: Docker build appointment-service
         run: |
           cd appointment-service
-          docker build -t gcr.io/${GCP_PROJECT_ID}/appointment-service:1.0 .
+          docker build -t gcr.io/${motocorp-simon}/appointment-service:1.0 .
 
       ##############################
       # Build order-service
@@ -52,10 +52,23 @@ jobs:
       - name: Docker build order-service
         run: |
           cd order-service
-          docker build -t gcr.io/${GCP_PROJECT_ID}/order-service:1.0 .
+          docker build -t gcr.io/${motocorp-simon}/order-service:1.0 .
 
       ##############################
-      # Authenticate GCP & Push images
+      # Build patient-service
+      ##############################
+      - name: Install patient-service dependencies
+        run: |
+          cd patient-service
+          npm install
+
+      - name: Docker build patient-service
+        run: |
+          cd patient-service
+          docker build -t gcr.io/${motocorp-simon}/patient-service:1.0 .
+
+      ##############################
+      # Authenticate GCP & Push Docker images
       ##############################
       - name: Authenticate GCP
         run: |
@@ -64,24 +77,26 @@ jobs:
           gcloud auth configure-docker
 
       - name: Push appointment-service to GCR
-        run: |
-          docker push gcr.io/${GCP_PROJECT_ID}/appointment-service:1.0
+        run: docker push gcr.io/${motocorp-simon}/appointment-service:1.0
 
       - name: Push order-service to GCR
-        run: |
-          docker push gcr.io/${GCP_PROJECT_ID}/order-service:1.0
+        run: docker push gcr.io/${motocorp-simon}/order-service:1.0
+
+      - name: Push patient-service to GCR
+        run: docker push gcr.io/${motocorp-simon}/patient-service:1.0
 
       ##############################
-      # Optional: Deploy via Helm
+      # Optional Helm Deploy
       ##############################
       - name: Install Helm
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Helm upgrade/deploy appointment-service
-        run: |
-          helm upgrade --install appointment-service helm-charts/appointment-service
+        run: helm upgrade --install appointment-service helm-charts/appointment-service
 
       - name: Helm upgrade/deploy order-service
-        run: |
-          helm upgrade --install order-service helm-charts/order-service
+        run: helm upgrade --install order-service helm-charts/order-service
+
+      - name: Helm upgrade/deploy patient-service
+        run: helm upgrade --install patient-service helm-charts/patient-service
