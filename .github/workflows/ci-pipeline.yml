@@ -1,0 +1,87 @@
+name: CI Pipeline for Microservices
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-docker:
+    runs-on: ubuntu-latest
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}  # GitHub secret
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}          # base64-encoded service account key
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      ##############################
+      # Build appointment-service
+      ##############################
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Node.js dependencies
+        run: |
+          cd appointment-service
+          npm install
+
+      - name: Docker build appointment-service
+        run: |
+          cd appointment-service
+          docker build -t gcr.io/${GCP_PROJECT_ID}/appointment-service:1.0 .
+
+      ##############################
+      # Build order-service
+      ##############################
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build order-service (Maven)
+        run: |
+          cd order-service
+          mvn clean package -DskipTests
+
+      - name: Docker build order-service
+        run: |
+          cd order-service
+          docker build -t gcr.io/${GCP_PROJECT_ID}/order-service:1.0 .
+
+      ##############################
+      # Authenticate GCP & Push images
+      ##############################
+      - name: Authenticate GCP
+        run: |
+          echo "${GCP_SA_KEY}" | base64 --decode > gcp-key.json
+          gcloud auth activate-service-account --key-file=gcp-key.json
+          gcloud auth configure-docker
+
+      - name: Push appointment-service to GCR
+        run: |
+          docker push gcr.io/${GCP_PROJECT_ID}/appointment-service:1.0
+
+      - name: Push order-service to GCR
+        run: |
+          docker push gcr.io/${GCP_PROJECT_ID}/order-service:1.0
+
+      ##############################
+      # Optional: Deploy via Helm
+      ##############################
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Helm upgrade/deploy appointment-service
+        run: |
+          helm upgrade --install appointment-service helm-charts/appointment-service
+
+      - name: Helm upgrade/deploy order-service
+        run: |
+          helm upgrade --install order-service helm-charts/order-service
