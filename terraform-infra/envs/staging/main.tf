@@ -1,6 +1,7 @@
 # Network Module
 module "network" {
   source               = "../../modules/network"
+  project_id           = var.project_id
   vpc_name             = var.vpc_name
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
@@ -11,6 +12,7 @@ module "network" {
 # IAM Module
 module "iam" {
   source             = "../../modules/iam"
+  project_id         = var.project_id
   env                = var.env
   microservice_names = var.microservice_names
 }
@@ -26,6 +28,7 @@ module "storage" {
 # GKE Cluster Module
 module "gke" {
   source          = "../../modules/gke"
+  project_id      = var.project_id
   env             = var.env
   region          = var.region
   vpc_id          = module.network.vpc_id
@@ -34,7 +37,9 @@ module "gke" {
 
 # Artifact Registry Module (Docker images)
 module "artifact_registry" {
-  source = "../../modules/artifact_registry"
-  env    = var.env
-  region = var.region
+  source        = "../../modules/artifact_registry"
+  project_id    = var.project_id
+  repository_id = "staging-docker-repo"
+  env           = var.env
+  region        = var.region   # if your module expects this
 }
