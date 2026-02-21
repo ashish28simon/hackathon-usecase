@@ -29,7 +29,8 @@ module "gke" {
 }
 
 module "artifact_registry" {
-  source = "../../modules/artifact_registry"
-  env    = var.env
-  region = var.region
+  source        = "../../modules/artifact_registry"
+  env           = var.env
+  region        = var.region
+  repository_id = "appointment-service"   # example, can create 3 separate repos for 3 microservices
 }
