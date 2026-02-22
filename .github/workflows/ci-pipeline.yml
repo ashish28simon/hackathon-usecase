@@ -32,8 +32,8 @@ jobs:
       - name: Build & Push application-service
         uses: docker/build-push-action@v4
         with:
-          context: ./application-service/src
-          file: ./application-service/src/Dockerfile
+          context: ./application-service
+          file: ./application-service/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ env.IMAGE_NAMESPACE }}/application-service:latest
@@ -43,8 +43,8 @@ jobs:
       - name: Build & Push patient-service
         uses: docker/build-push-action@v4
         with:
-          context: ./patient-service/src
-          file: ./patient-service/src/Dockerfile
+          context: ./patient-service
+          file: ./patient-service/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ env.IMAGE_NAMESPACE }}/patient-service:latest
@@ -55,8 +55,9 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./order-service
-          file: ./order-service/src/Dockerfile
+          file: ./order-service/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ env.IMAGE_NAMESPACE }}/order-service:latest
             ghcr.io/${{ env.IMAGE_NAMESPACE }}/order-service:${{ github.sha }}
+
