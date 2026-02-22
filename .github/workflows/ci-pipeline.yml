@@ -1,102 +1,62 @@
-name: CI Pipeline for Microservices
+name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  build-and-docker:
+  build-and-push:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
     env:
-      GCP_PROJECT_ID: ${{ secrets.motocorp-simon}}  # GCP project ID
-      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}          # Base64-encoded service account key
+      REGISTRY: ghcr.io
+      IMAGE_NAMESPACE: ${{ github.repository_owner }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      ##############################
-      # Build appointment-service
-      ##############################
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Login to GHCR
+        uses: docker/login-action@v2
         with:
-          node-version: '20'
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
 
-      - name: Install appointment-service dependencies
-        run: |
-          cd appointment-service
-          npm install
-
-      - name: Docker build appointment-service
-        run: |
-          cd appointment-service
-          docker build -t gcr.io/${motocorp-simon}/appointment-service:1.0 .
-
-      ##############################
-      # Build order-service
-      ##############################
-      - name: Set up Java
-        uses: actions/setup-java@v3
+      # Application Service
+      - name: Build & Push application-service
+        uses: docker/build-push-action@v4
         with:
-          distribution: temurin
-          java-version: '17'
+          context: ./application-service/src
+          file: ./application-service/src/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/application-service:latest
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/application-service:${{ github.sha }}
 
-      - name: Build order-service (Maven)
-        run: |
-          cd order-service
-          mvn clean package -DskipTests
+      # Patient Service
+      - name: Build & Push patient-service
+        uses: docker/build-push-action@v4
+        with:
+          context: ./patient-service/src
+          file: ./patient-service/src/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/patient-service:latest
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/patient-service:${{ github.sha }}
 
-      - name: Docker build order-service
-        run: |
-          cd order-service
-          docker build -t gcr.io/${motocorp-simon}/order-service:1.0 .
-
-      ##############################
-      # Build patient-service
-      ##############################
-      - name: Install patient-service dependencies
-        run: |
-          cd patient-service
-          npm install
-
-      - name: Docker build patient-service
-        run: |
-          cd patient-service
-          docker build -t gcr.io/${motocorp-simon}/patient-service:1.0 .
-
-      ##############################
-      # Authenticate GCP & Push Docker images
-      ##############################
-      - name: Authenticate GCP
-        run: |
-          echo "${GCP_SA_KEY}" | base64 --decode > gcp-key.json
-          gcloud auth activate-service-account --key-file=gcp-key.json
-          gcloud auth configure-docker
-
-      - name: Push appointment-service to GCR
-        run: docker push gcr.io/${motocorp-simon}/appointment-service:1.0
-
-      - name: Push order-service to GCR
-        run: docker push gcr.io/${motocorp-simon}/order-service:1.0
-
-      - name: Push patient-service to GCR
-        run: docker push gcr.io/${motocorp-simon}/patient-service:1.0
-
-      ##############################
-      # Optional Helm Deploy
-      ##############################
-      - name: Install Helm
-        run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-      - name: Helm upgrade/deploy appointment-service
-        run: helm upgrade --install appointment-service helm-charts/appointment-service
-
-      - name: Helm upgrade/deploy order-service
-        run: helm upgrade --install order-service helm-charts/order-service
-
-      - name: Helm upgrade/deploy patient-service
-        run: helm upgrade --install patient-service helm-charts/patient-service
+      # Order Service
+      - name: Build & Push order-service
+        uses: docker/build-push-action@v4
+        with:
+          context: ./order-service
+          file: ./order-service/src/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/order-service:latest
+            ghcr.io/${{ env.IMAGE_NAMESPACE }}/order-service:${{ github.sha }}
